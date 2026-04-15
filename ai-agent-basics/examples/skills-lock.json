@@ -5,6 +5,11 @@
       "source": "varde80/arxiv-zotero-obsidian",
       "sourceType": "github",
       "computedHash": "a6674c1457822e16fa75a24574ae5d0d9662f6eab77d5a08e0222015691a1112"
+    },
+    "refactor": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "computedHash": "87789a786b96f99ba0680e89345a975106e10e7db1071c7cdc2e76d507c449d6"
     }
   }
 }

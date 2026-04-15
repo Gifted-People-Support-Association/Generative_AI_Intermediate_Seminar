@@ -1,12 +1,10 @@
-from typing import Annotated, Sequence
+from typing import Sequence
 
+from agent_executor import normalize_tool_call
 from dotenv import load_dotenv
-from google import genai
-from IPython.display import Image, display
 from langchain.chat_models import BaseChatModel
-from langchain.tools import BaseTool, tool
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.tools import BaseTool
+from langchain_core.messages import SystemMessage
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
@@ -14,7 +12,8 @@ load_dotenv()
 
 SYSTEM_INSTRUCTION = """
 あなたはReAct (Reason+Act) パターンに従うAIアシスタントです。
-各ステップで必ず以下の形式で応答してください：
+各ステップでは、必要ならツールを呼び出してください。
+思考過程を出す場合は以下の形式を使って構いません：
 
 Thought: [現在の状況についての思考と分析]
 Action: [実行するアクションの名前]
@@ -35,6 +34,7 @@ class ReActAgent:
     ):
         self.model = model
         self.tools = tools
+        self.tool_names = {tool.name for tool in self.tools}
         self.workflow = StateGraph(MessagesState)
         self.workflow.add_node("llm_node", self._call_model)
         self.workflow.add_node("tool_node", ToolNode(tools=self.tools))
@@ -45,6 +45,7 @@ class ReActAgent:
             {"tools": "tool_node", END: END}
         )
         self.workflow.add_edge("tool_node", "llm_node")
+        self.graph = self.workflow.compile()
 
     def _call_model(self, state: MessagesState) -> MessagesState:
         model_with_tools = self.model.bind_tools(tools=self.tools)
@@ -53,4 +54,6 @@ class ReActAgent:
             *state["messages"]
         ]
         llm_response = model_with_tools.invoke(full_prompt)
+        llm_response = normalize_tool_call(llm_response, self.tool_names)
         return {"messages": [llm_response]}
+
